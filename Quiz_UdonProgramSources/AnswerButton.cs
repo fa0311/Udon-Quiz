@@ -10,6 +10,7 @@ public class AnswerButton : UdonSharpBehaviour
     [SerializeField] TextMeshPro QuizMonitor;
     [SerializeField] TextMeshPro RankingMonitor;
     [SerializeField] GameObject[] KeyboardButtonList;
+    [SerializeField] GameObject Bar;
     [SerializeField] TextMeshPro[] KeyboardTextList;
     [SerializeField] TextAsset[] QuizCsvDataList;
     [SerializeField] TextAsset ChoiceCsvData;
@@ -54,6 +55,8 @@ public class AnswerButton : UdonSharpBehaviour
 
     /* 解答同期用 自分のid */
     int PlayerListKey = 0;
+
+    float QuizStartTime = 0;
 
     /* 解答同期用 送られてきたデータの一時保存 */
     int[] ReceiveData = new int[128];
@@ -125,6 +128,18 @@ public class AnswerButton : UdonSharpBehaviour
         {
             KeyBoardUpdate();
         }
+        if(Flow == 1 || Flow == 2 || Flow == 3)
+        {
+            float time = Time.time - QuizStartTime;
+            if(time > 20) return;
+            Vector3 BarScale = Bar.transform.localScale;
+            BarScale.x = (1.0f / 20) * time;
+            Bar.transform.localScale = BarScale;
+
+            Vector3 BarPos = Bar.transform.localPosition;
+            BarPos.x = (-0.5f / 20) * (20 - time);
+            Bar.transform.localPosition = BarPos;
+        }
     }
     public void OnPlayerJoined(VRCPlayerApi player)
     {
@@ -195,6 +210,8 @@ public class AnswerButton : UdonSharpBehaviour
                     Vector3 Pos = KeyboardObject.transform.position;
                     Pos.y = -100;
                     KeyboardObject.transform.position = Pos;
+                    foreach (TextMeshPro KeyboardText in KeyboardTextList) KeyboardText.text = "";
+
                     return;
                 }
             }
@@ -208,6 +225,7 @@ public class AnswerButton : UdonSharpBehaviour
 
                 Print("Send: " + QuizTime.ToString() + ", " + PlayerListKey.ToString());
                 SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "NetworkEventQuizTimeSync" + QuizTime.ToString() + "_" + PlayerListKey.ToString());
+                foreach (TextMeshPro KeyboardText in KeyboardTextList) KeyboardText.text = "";
 
                 return;
             }
@@ -253,12 +271,18 @@ public class AnswerButton : UdonSharpBehaviour
     {
         if(QuizKeyLocal == -1) return;
         if (Flow != 0) return;
+        Print("Initialization");
 
         QuizTime = -1;
         Flow = 1;
         QuizMonitor.text = "";
         RankingMonitor.text = "回答したプレイヤーはいません";
         Question = QuizList[QuizKeyLocal].Split(',')[0];
+
+        Bar.transform.localScale = new Vector3(0f, 1f, 1f);
+        Bar.transform.localPosition = new Vector3(-0.5f, 0f, -1f);
+
+        QuizStartTime = Time.time;
 
         PlayerList = GetPlayersSorted();
         PlayerListKey = GetPlayersSelfKey(PlayerList);
@@ -310,7 +334,7 @@ public class AnswerButton : UdonSharpBehaviour
 
         Print("Start");
         if(ProgressJoinFlag){
-            SendCustomEventDelayedSeconds("QuizStart", 5.0f);
+            SendCustomEventDelayedSeconds("QuizStart", 3.0f);
             SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "NetworkEventProgressJoinSync");
             return;
         }
@@ -334,15 +358,18 @@ public class AnswerButton : UdonSharpBehaviour
 
     public void QuizEnd()
     {
+        if(Flow == 1 || Flow == 2) QuizMonitor.text = "時間切れです";
         QuizMonitor.text += "\n" + QuizList[QuizKeyLocal].Split(',')[0] + "\n答え: " + QuizList[QuizKeyLocal].Split(',')[1];
         Flow = 3;
+
+        foreach (TextMeshPro KeyboardText in KeyboardTextList) KeyboardText.text = "";
 
         Vector3 Pos = KeyboardObject.transform.position;
         Pos.y = -100;
         KeyboardObject.transform.position = Pos;
 
-        if (Networking.LocalPlayer.isMaster) SendCustomEventDelayedSeconds("QuizEndWait", 5.0f);
-        else SendCustomEventDelayedSeconds("QuizEndWait", 3.0f);
+        if (Networking.LocalPlayer.isMaster) SendCustomEventDelayedSeconds("QuizEndWait", 7.0f);
+        else SendCustomEventDelayedSeconds("QuizEndWait", 4.0f);
     }
 
     public void QuizEndWait()
