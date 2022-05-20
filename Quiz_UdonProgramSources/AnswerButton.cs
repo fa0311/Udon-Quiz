@@ -47,6 +47,7 @@ public class AnswerButton : UdonSharpBehaviour
     int QuizTime = -1;
     /* クイズの問題を格納 */
     string Question = "";
+    string[] QuizListSplit = new string[3];
     /* 現在キーボードで答えを何文字目まで入力したか */
     int AnserNumber = 0;
 
@@ -196,7 +197,6 @@ public class AnswerButton : UdonSharpBehaviour
             LocalPosition.y = 0.0f;
             KeyboardButton.transform.localPosition = LocalPosition;
 
-            string[] QuizListSplit = QuizList[QuizKeyLocal].Split(',');
             string AnserList = QuizListSplit[1];
 
             if (AnserNumber > 0)
@@ -239,7 +239,6 @@ public class AnswerButton : UdonSharpBehaviour
         int QuizCorrectKey = Random.Range(0, KeyboardTextList.Length);
         int Key = -1;
 
-        string[] QuizListSplit = QuizList[QuizKeyLocal].Split(',');
         string TextTypeList = QuizListSplit[2];
         char TextTypeChar = TextTypeList[AnserNumber];
         int TextType = int.Parse(TextTypeChar.ToString());
@@ -277,7 +276,8 @@ public class AnswerButton : UdonSharpBehaviour
         Flow = 1;
         QuizMonitor.text = "";
         RankingMonitor.text = "回答したプレイヤーはいません";
-        Question = QuizList[QuizKeyLocal].Split(',')[0];
+        QuizListSplit = QuizList[QuizKeyLocal].Split(',');
+        Question = QuizListSplit[0];
 
         Bar.transform.localScale = new Vector3(0f, 1f, 1f);
         Bar.transform.localPosition = new Vector3(-0.5f, 0f, -1f);
@@ -289,8 +289,8 @@ public class AnswerButton : UdonSharpBehaviour
 
         ReceiveData = new int[128];
 
-        Print("Question: " + QuizList[QuizKeyLocal].Split(',')[0]);
-        Print("Anser: " + QuizList[QuizKeyLocal].Split(',')[1]);
+        Print("Question: " + Question);
+        Print("Anser: " + QuizListSplit[1]);
 
         SendCustomEventDelayedSeconds("QuizEnd", 20.0f);
         QuizView();
@@ -359,7 +359,7 @@ public class AnswerButton : UdonSharpBehaviour
     public void QuizEnd()
     {
         if(Flow == 1 || Flow == 2) QuizMonitor.text = "時間切れです";
-        QuizMonitor.text += "\n" + QuizList[QuizKeyLocal].Split(',')[0] + "\n答え: " + QuizList[QuizKeyLocal].Split(',')[1];
+        QuizMonitor.text += "\n" + Question + "\n答え: " + QuizListSplit[1];
         Flow = 3;
 
         foreach (TextMeshPro KeyboardText in KeyboardTextList) KeyboardText.text = "";
